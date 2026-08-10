@@ -1,0 +1,528 @@
+openapi: "3.1.0"
+
+info:
+  title: Urban Sustainability Assessment System — API
+  version: "1.0.0"
+  description: |
+    REST API for S-50 HackNova'26. Provides sustainability scores, indicator data,
+    recommendations, and policy simulation for 10 Chennai wards across 5 SDG-11 pillars.
+
+    ## ⚠️  CONTRACT FROZEN — Day 3
+    **Do NOT change field names, types, or endpoint paths without unanimous team sign-off.**
+    Any change from here needs approval from whoever is building against it (M3 / M4).
+    Breaking this contract mid-build is how the schedule slips.
+
+  contact:
+    name: Team USAS
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8000
+    description: Local development
+  - url: https://usas-api.onrender.com
+    description: Staging (Render)
+
+tags:
+  - name: health
+    description: Health and status checks
+  - name: wards
+    description: Ward master data for Chennai
+  - name: indicators
+    description: Indicator catalogue (20 indicators, 5 pillars)
+  - name: scores
+    description: Composite sustainability scores
+  - name: recommendations
+    description: Ranked improvement opportunities
+  - name: simulate
+    description: Policy what-if simulation
+
+paths:
+
+  # ─── Health ────────────────────────────────────────────────────────────────
+  /health:
+    get:
+      operationId: health_check
+      tags: [health]
+      summary: API health check
+      description: Returns DB connectivity status and seed row count.
+      responses:
+        "200":
+          description: Health status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthOut"
+              example:
+                status: ok
+                db_ok: true
+                row_count: 18000
+                contract: frozen-day3
+                version: 1.0.0
+
+  # ─── Wards ─────────────────────────────────────────────────────────────────
+  /api/v1/wards:
+    get:
+      operationId: list_wards
+      tags: [wards]
+      summary: List all wards
+      description: Returns all 10 Chennai wards with geographic metadata.
+      responses:
+        "200":
+          description: Ward list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WardListOut"
+
+  /api/v1/wards/{ward_id}:
+    get:
+      operationId: get_ward
+      tags: [wards]
+      summary: Get a single ward
+      parameters:
+        - name: ward_id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: ward-001
+      responses:
+        "200":
+          description: Ward detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WardOut"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ─── Indicators ────────────────────────────────────────────────────────────
+  /api/v1/indicators:
+    get:
+      operationId: list_indicators
+      tags: [indicators]
+      summary: Full indicator catalogue
+      description: Returns all 20 indicators with pillar, weight, direction, and benchmark.
+      responses:
+        "200":
+          description: Indicator list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IndicatorListOut"
+
+  # ─── Scores ────────────────────────────────────────────────────────────────
+  /api/v1/scores:
+    get:
+      operationId: list_scores
+      tags: [scores]
+      summary: Latest score for every ward
+      parameters:
+        - name: score_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+            example: "2026-08-09"
+      responses:
+        "200":
+          description: Score list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScoreOut"
+
+  /api/v1/scores/{ward_id}:
+    get:
+      operationId: get_score
+      tags: [scores]
+      summary: Score for one ward
+      parameters:
+        - name: ward_id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: ward-001
+        - name: score_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Score detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScoreOut"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/scores/{ward_id}/explain:
+    get:
+      operationId: explain_score
+      tags: [scores]
+      summary: Full indicator decomposition (explainability)
+      description: |
+        Returns each indicator's contribution to the total score, ranked
+        from highest to lowest contribution. Also includes a plain-English narrative.
+        The sum of all contributions equals the total score (±0.01 floating point).
+      parameters:
+        - name: ward_id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: ward-001
+        - name: score_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Explanation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExplainOut"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/scores/history:
+    get:
+      operationId: score_history
+      tags: [scores]
+      summary: 90-day score trend for a ward
+      parameters:
+        - name: ward_id
+          in: query
+          required: true
+          schema:
+            type: string
+            example: ward-001
+        - name: days
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 7
+            maximum: 365
+            default: 90
+      responses:
+        "200":
+          description: Score history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScoreHistoryOut"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ─── Recommendations ───────────────────────────────────────────────────────
+  /api/v1/recommendations/{ward_id}:
+    get:
+      operationId: get_recommendations
+      tags: [recommendations]
+      summary: Ranked improvement recommendations for a ward
+      description: |
+        Returns up to 6 recommendations targeting the ward's weakest indicators,
+        ranked by projected_score_uplift descending (highest impact first).
+      parameters:
+        - name: ward_id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: ward-001
+      responses:
+        "200":
+          description: Recommendations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecommendationsOut"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ─── Simulate ──────────────────────────────────────────────────────────────
+  /api/v1/simulate:
+    post:
+      operationId: simulate
+      tags: [simulate]
+      summary: What-if policy simulation
+      description: |
+        Stateless simulation. Applies absolute deltas to indicator raw values
+        (clamped to the indicator's min/max bounds) and recomputes the score.
+        Zero adjustments MUST return the exact baseline score — this is a
+        regression-critical property.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SimulateRequest"
+            example:
+              ward_id: ward-001
+              adjustments:
+                green_cover_pct: 5.0
+                avg_commute_min: -8.0
+      responses:
+        "200":
+          description: Simulation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimulateOut"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+# ─── Components ───────────────────────────────────────────────────────────────
+components:
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              detail:
+                type: string
+                example: "Ward 'ward-099' not found."
+    UnprocessableEntity:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              detail:
+                type: array
+                items:
+                  type: object
+
+  schemas:
+    # ── Health ──
+    HealthOut:
+      type: object
+      required: [status, db_ok, row_count, contract, version]
+      properties:
+        status:     { type: string, example: ok }
+        db_ok:      { type: boolean }
+        row_count:  { type: integer, example: 18000 }
+        contract:   { type: string, example: frozen-day3 }
+        version:    { type: string, example: 1.0.0 }
+
+    # ── Ward ──
+    WardOut:
+      type: object
+      required: [id, name, city, state, lat, lon, population, area_km2]
+      properties:
+        id:          { type: string, example: ward-001 }
+        name:        { type: string, example: Anna Nagar }
+        city:        { type: string, example: Chennai }
+        state:       { type: string, example: Tamil Nadu }
+        lat:         { type: number, format: float, example: 13.0850 }
+        lon:         { type: number, format: float, example: 80.2101 }
+        population:  { type: integer, example: 125000 }
+        area_km2:    { type: number, format: float, example: 8.5 }
+
+    WardListOut:
+      type: object
+      required: [wards, total]
+      properties:
+        wards:
+          type: array
+          items:
+            $ref: "#/components/schemas/WardOut"
+        total: { type: integer, example: 10 }
+
+    # ── Indicator ──
+    IndicatorOut:
+      type: object
+      required: [id, label, unit, pillar, direction, weight, min_val, max_val, source]
+      properties:
+        id:          { type: string, example: pm25 }
+        label:       { type: string, example: "PM2.5 Concentration" }
+        unit:        { type: string, example: "μg/m³" }
+        pillar:      { type: string, enum: [environmental_quality, infrastructure_efficiency, public_services, mobility, community_wellbeing] }
+        direction:   { type: string, enum: [lower_better, higher_better] }
+        weight:      { type: number, format: float, example: 0.08, description: "Sums to 1.0 across all indicators" }
+        min_val:     { type: number, format: float, example: 0.0 }
+        max_val:     { type: number, format: float, example: 250.0 }
+        who_target:  { type: number, format: float, nullable: true, example: 15.0 }
+        source:      { type: string, example: cpcb }
+        description: { type: string, nullable: true }
+
+    IndicatorListOut:
+      type: object
+      required: [indicators, total]
+      properties:
+        indicators:
+          type: array
+          items:
+            $ref: "#/components/schemas/IndicatorOut"
+        total: { type: integer, example: 20 }
+
+    # ── Score ──
+    PillarScores:
+      type: object
+      required: [environmental_quality, infrastructure_efficiency, public_services, mobility, community_wellbeing]
+      properties:
+        environmental_quality:      { type: number, format: float, minimum: 0, maximum: 100, example: 81.2 }
+        infrastructure_efficiency:  { type: number, format: float, minimum: 0, maximum: 100, example: 74.5 }
+        public_services:            { type: number, format: float, minimum: 0, maximum: 100, example: 79.1 }
+        mobility:                   { type: number, format: float, minimum: 0, maximum: 100, example: 68.3 }
+        community_wellbeing:        { type: number, format: float, minimum: 0, maximum: 100, example: 77.8 }
+
+    ScoreOut:
+      type: object
+      required: [ward_id, ward_name, date, total, grade, pillar_scores, data_completeness, computed_at]
+      properties:
+        ward_id:          { type: string, example: ward-001 }
+        ward_name:        { type: string, example: Anna Nagar }
+        date:             { type: string, format: date, example: "2026-08-09" }
+        total:            { type: number, format: float, minimum: 0, maximum: 100, example: 74.2 }
+        grade:            { type: string, enum: [A+, A, B+, B, B-, C+, C, D, F], example: B+ }
+        pillar_scores:
+          $ref: "#/components/schemas/PillarScores"
+        data_completeness: { type: number, format: float, minimum: 0, maximum: 1, example: 0.95 }
+        computed_at:      { type: string, format: date-time }
+
+    # ── Explain ──
+    IndicatorContribution:
+      type: object
+      required: [indicator_id, label, pillar, unit, normalized_value, weight, contribution, direction, status]
+      properties:
+        indicator_id:      { type: string, example: pm25 }
+        label:             { type: string, example: "PM2.5 Concentration" }
+        pillar:            { type: string, example: environmental_quality }
+        raw_value:         { type: number, format: float, nullable: true, example: 44.2 }
+        unit:              { type: string, example: "μg/m³" }
+        normalized_value:  { type: number, format: float, minimum: 0, maximum: 100, example: 74.3 }
+        weight:            { type: number, format: float, example: 0.08 }
+        contribution:      { type: number, format: float, example: 5.944, description: "= normalized_value × weight. Sum of all contributions = total score." }
+        direction:         { type: string, enum: [positive, negative, neutral] }
+        status:            { type: string, enum: [good, moderate, poor] }
+
+    ExplainOut:
+      type: object
+      required: [ward_id, ward_name, date, total, indicator_contributions, narrative]
+      properties:
+        ward_id:   { type: string }
+        ward_name: { type: string }
+        date:      { type: string, format: date }
+        total:     { type: number, format: float }
+        indicator_contributions:
+          type: array
+          items:
+            $ref: "#/components/schemas/IndicatorContribution"
+        narrative: { type: string, example: "Anna Nagar scores 74.2/100 (Grade B+). Key strengths: Green Cover and Water Quality..." }
+
+    # ── Score History ──
+    ScoreHistoryPoint:
+      type: object
+      required: [date, total, environmental_quality, infrastructure_efficiency, public_services, mobility, community_wellbeing]
+      properties:
+        date:                       { type: string, format: date }
+        total:                      { type: number, format: float }
+        environmental_quality:      { type: number, format: float }
+        infrastructure_efficiency:  { type: number, format: float }
+        public_services:            { type: number, format: float }
+        mobility:                   { type: number, format: float }
+        community_wellbeing:        { type: number, format: float }
+
+    ScoreHistoryOut:
+      type: object
+      required: [ward_id, ward_name, days, history]
+      properties:
+        ward_id:   { type: string }
+        ward_name: { type: string }
+        days:      { type: integer, example: 90 }
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScoreHistoryPoint"
+
+    # ── Recommendations ──
+    RecommendationItem:
+      type: object
+      required: [id, title, detail, impact, category, indicator, projected_score_uplift, cost_band, time_to_effect_months]
+      properties:
+        id:                    { type: string, example: rec-ward-001-001 }
+        title:                 { type: string, example: "Expand low-emission zone" }
+        detail:                { type: string }
+        impact:                { type: string, enum: [high, medium, low] }
+        category:              { type: string, example: Environmental Quality }
+        indicator:             { type: string, example: pm25 }
+        projected_score_uplift: { type: number, format: float, example: 2.4 }
+        cost_band:             { type: string, enum: [low, medium, high] }
+        time_to_effect_months: { type: integer, example: 3 }
+
+    RecommendationsOut:
+      type: object
+      required: [ward_id, ward_name, recommendations]
+      properties:
+        ward_id:         { type: string }
+        ward_name:       { type: string }
+        recommendations:
+          type: array
+          maxItems: 6
+          items:
+            $ref: "#/components/schemas/RecommendationItem"
+
+    # ── Simulate ──
+    SimulateRequest:
+      type: object
+      required: [ward_id, adjustments]
+      properties:
+        ward_id:
+          type: string
+          example: ward-001
+        adjustments:
+          type: object
+          additionalProperties:
+            type: number
+            format: float
+          example:
+            green_cover_pct: 5.0
+            avg_commute_min: -8.0
+
+    PillarDelta:
+      type: object
+      required: [baseline, simulated, delta]
+      properties:
+        baseline:  { type: number, format: float }
+        simulated: { type: number, format: float }
+        delta:     { type: number, format: float }
+
+    SimulateOut:
+      type: object
+      required: [ward_id, ward_name, baseline_score, simulated_score, delta, grade_before, grade_after, pillar_deltas, adjustments_applied]
+      properties:
+        ward_id:         { type: string }
+        ward_name:       { type: string }
+        baseline_score:  { type: number, format: float, example: 74.2 }
+        simulated_score: { type: number, format: float, example: 77.8 }
+        delta:           { type: number, format: float, example: 3.6 }
+        grade_before:    { type: string, enum: [A+, A, B+, B, B-, C+, C, D, F] }
+        grade_after:     { type: string, enum: [A+, A, B+, B, B-, C+, C, D, F] }
+        pillar_deltas:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/PillarDelta"
+        adjustments_applied:
+          type: object
+          additionalProperties:
+            type: number
+            format: float

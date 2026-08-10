@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { ThemeProvider } from "../context/theme-context";
 import { Toaster } from "@/components/ui/sonner";
+import { WardProvider } from "@/context/ward-context";
 
 function NotFoundComponent() {
   return (
@@ -133,11 +134,13 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-        <Outlet />
-        <Toaster />
-      </ThemeProvider>
+      <WardProvider>
+        <ThemeProvider>
+          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+          <Outlet />
+          <Toaster />
+        </ThemeProvider>
+      </WardProvider>
     </QueryClientProvider>
   );
 }

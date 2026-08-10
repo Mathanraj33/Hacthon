@@ -6,6 +6,8 @@ import { SidebarNav } from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+import { WardSelector } from "@/components/dashboard/ward-selector";
+
 type DashboardLayoutProps = {
   title: string;
   subtitle?: string;
@@ -133,8 +135,12 @@ export function DashboardLayout({ title, subtitle, actions, children }: Dashboar
               <p className="truncate text-xs text-muted-foreground sm:text-sm">{subtitle}</p>
             ) : null}
           </div>
-          <div className="flex items-center gap-1">
-            {actions}
+          <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+              <span className="size-2 rounded-full bg-primary animate-pulse" />
+              City Official Mode
+            </div>
+            {actions ? actions : <WardSelector />}
             <Button
               variant="ghost"
               size="icon"

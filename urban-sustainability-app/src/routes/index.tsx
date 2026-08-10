@@ -55,34 +55,75 @@ function LandingPage() {
       <Navbar />
 
       <main className="flex-1">
-        <section id="overview" className="relative overflow-hidden border-b border-border">
+        <section id="overview" className="scroll-mt-24 relative overflow-hidden border-b border-border">
           <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,color-mix(in_oklab,var(--color-primary)_18%,transparent),transparent_65%)]" />
           <div className="mx-auto w-full max-w-6xl px-5 py-16 text-center sm:py-24">
-            <Badge variant="outline" className="rounded-full border-primary/30 bg-primary/10 text-primary">
-              UN Sustainable Development Goal 11
+            <Badge variant="outline" className="rounded-full border-primary/30 bg-primary/10 text-primary font-medium px-4 py-1">
+              UN Sustainable Development Goal 11 · Glass-Box Scoring Engine
             </Badge>
-            <h1 className="mx-auto mt-6 max-w-3xl text-3xl font-semibold leading-tight text-foreground sm:text-5xl">
+            <h1 className="mx-auto mt-6 max-w-3xl text-3xl font-bold tracking-tight text-foreground sm:text-5xl">
               Intelligent Urban Sustainability Assessment System
             </h1>
-            <p className="mx-auto mt-5 max-w-2xl text-base text-muted-foreground sm:text-lg">
-              Unify environmental, mobility and resource data into a single score, then act on
-              AI-ranked recommendations that make cities cleaner, safer and more liveable.
+            <p className="mx-auto mt-5 max-w-2xl text-base text-muted-foreground sm:text-lg leading-relaxed">
+              Continuous ward-level scoring powered by real-time air quality, mobility, and civic data.
+              Decompose scores into weighted indicators, run policy simulations, and prioritize investments.
             </p>
+
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-              <Button asChild size="lg" className="h-12 rounded-xl">
+              <Button asChild size="lg" className="h-12 rounded-xl px-6 text-base font-semibold shadow-md transition-transform active:scale-95">
                 <Link to="/dashboard">
-                  Explore the dashboard
-                  <ArrowRight className="ml-1 size-4" aria-hidden="true" />
+                  Explore Live Dashboard
+                  <ArrowRight className="ml-2 size-5" aria-hidden="true" />
                 </Link>
               </Button>
-              <Button asChild size="lg" variant="outline" className="h-12 rounded-xl">
-                <Link to="/register">Create an account</Link>
+              <Button asChild size="lg" variant="outline" className="h-12 rounded-xl px-6 text-base font-medium">
+                <Link to="/dashboard">
+                  <Sparkles className="mr-2 size-4 text-amber-500" />
+                  Try Policy Simulator
+                </Link>
               </Button>
+            </div>
+
+            {/* Live Score Preview Card */}
+            <div className="mx-auto mt-12 max-w-2xl rounded-2xl border border-border/80 bg-card/90 p-6 text-left shadow-[var(--shadow-elevated)] backdrop-blur">
+              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="size-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Live Assessment Node · Staging
+                    </span>
+                  </div>
+                  <h3 className="mt-1 text-lg font-semibold text-foreground">Chennai — Anna Nagar (Ward 01)</h3>
+                </div>
+                <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 px-3.5 py-1.5 border border-emerald-500/20">
+                  <span className="font-display text-2xl font-bold text-emerald-600 dark:text-emerald-400">68.4</span>
+                  <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 uppercase">/ 100 · Grade B</span>
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-4 text-xs sm:grid-cols-4">
+                <div className="rounded-xl bg-muted/50 p-2.5">
+                  <span className="text-muted-foreground">Air Quality</span>
+                  <p className="mt-0.5 font-semibold text-foreground">35 / 100 (Drag: -8.4)</p>
+                </div>
+                <div className="rounded-xl bg-muted/50 p-2.5">
+                  <span className="text-muted-foreground">Green Cover</span>
+                  <p className="mt-0.5 font-semibold text-foreground">82 / 100 (Boost: +6.1)</p>
+                </div>
+                <div className="rounded-xl bg-muted/50 p-2.5">
+                  <span className="text-muted-foreground">Public Services</span>
+                  <p className="mt-0.5 font-semibold text-foreground">74 / 100</p>
+                </div>
+                <div className="rounded-xl bg-muted/50 p-2.5">
+                  <span className="text-muted-foreground">Data Feed</span>
+                  <p className="mt-0.5 font-semibold text-emerald-600 dark:text-emerald-400">CPCB Live</p>
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
-        <section id="modules" className="mx-auto w-full max-w-6xl px-5 py-16 sm:py-20">
+        <section id="modules" className="scroll-mt-24 mx-auto w-full max-w-6xl px-5 py-16 sm:py-20">
           <div className="max-w-2xl">
             <h2 className="text-2xl font-semibold text-foreground sm:text-3xl">
               Six assessment modules, one score
@@ -111,7 +152,7 @@ function LandingPage() {
           </div>
         </section>
 
-        <section id="impact" className="border-y border-border bg-card">
+        <section id="impact" className="scroll-mt-24 border-y border-border bg-card">
           <div className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-8 px-5 py-14 lg:grid-cols-4">
             {impact.map((item) => (
               <div key={item.label} className="text-center">
@@ -143,8 +184,8 @@ function LandingPage() {
             <p className="mx-auto mt-3 max-w-xl text-sm opacity-90">
               Set up your first assessment in minutes and track progress toward SDG 11 targets.
             </p>
-            <Button asChild size="lg" variant="secondary" className="mt-7 h-12 rounded-xl">
-              <Link to="/register">Get started free</Link>
+            <Button asChild size="lg" variant="secondary" className="mt-7 h-12 rounded-xl font-semibold">
+              <Link to="/dashboard">Launch Live Dashboard</Link>
             </Button>
           </div>
         </section>

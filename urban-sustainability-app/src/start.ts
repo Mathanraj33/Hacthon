@@ -27,3 +27,7 @@ const csrfMiddleware = createCsrfMiddleware({
 export const startInstance = createStart(() => ({
   requestMiddleware: [errorMiddleware, csrfMiddleware],
 }));
+// Register Mock Service Worker in development mode
+if (import.meta.env.DEV) {
+  import("./mocks/browser");
+}
